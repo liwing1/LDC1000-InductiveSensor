@@ -56,7 +56,8 @@ void writeRegister(uint8_t addr, uint8_t data)
   digitalWrite(SS, HIGH);  
 }
 
-void ldcConfig( void ){
+void ldcConfig( void )
+{
   writeRegister(RMAX_REG, 0x13);
   writeRegister(RMIN_REG, 0x3D);
 
@@ -79,4 +80,21 @@ void clkConfig( void )
   TCCR1B = ((1 << WGM12) | (1 << CS10));
   TIMSK1 = 0;
   OCR1A = 0;    //0-8MHz\1-4MHZ\3-2MHZ\7-1MHZ
+}
+
+float medeProx( void )
+{
+  uint32_t out = 0;
+  float Y = 0;
+  
+  for (int i = 0; i < 100; i++){
+    out  += readRegister(PRXL_REG, 2);  
+  }
+  out /= 100;
+
+  Y = out/32768.0f;
+
+  Y = (RP_MAX*RP_MIN)/( (RP_MIN*(1-Y)) + (RP_MAX*Y) );
+
+  return Y;
 }

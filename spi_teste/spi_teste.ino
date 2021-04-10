@@ -8,8 +8,12 @@
 void setup() {
   pinMode(SS, OUTPUT);
   digitalWrite(SS, HIGH);
+
+  pinMode(8, OUTPUT);
+  digitalWrite(8, LOW);
   
   Serial.begin(9600);
+  delay(100);
   SPI.begin();
 
   clkConfig();
@@ -18,35 +22,44 @@ void setup() {
 }
 
 void loop() {
-  Serial.print("READ REGISTER: 0x");
-  uint32_t out = readRegister(PRXL_REG, 2);
-  Serial.println(out, HEX);
+  uint32_t out = readRegister(FQCL_REG, 3);
   
-  delay(5000);
+  Serial.print("READ REGISTER: ");
+  Serial.println( out );
+
+  if( out < 3200 )
+    digitalWrite(8, HIGH);
+  else
+    digitalWrite(8, LOW);
+   
+  delay(500);
+  printBits(readRegister(STTS_REG, 1));
 
 }
 
 
 uint32_t readRegister(uint8_t addr, uint8_t nBytes)
 {
-  uint32_t slaveOut = 0 ;
+  uint32_t slaveOut = 0;
+  uint32_t readValue = 0;
   
   digitalWrite(SS, LOW);
   
   SPI.transfer(RD|addr);
-  slaveOut = SPI.transfer(0x00);
+  readValue = SPI.transfer(0x00);
 
-  nBytes--;
-  while(nBytes)
+  for( uint8_t i = 1; i != nBytes; i++ )
   {
-    slaveOut = ( slaveOut<<8 )  | SPI.transfer(0x00);
-    nBytes--;
+    slaveOut = SPI.transfer(0x00);
+    readValue |= slaveOut<<(8*i);
   }
   
   digitalWrite(SS, HIGH);
 
-  return slaveOut;
+  return readValue;
 }
+
+
 
 void writeRegister(uint8_t addr, uint8_t data)
 {
@@ -56,14 +69,16 @@ void writeRegister(uint8_t addr, uint8_t data)
   digitalWrite(SS, HIGH);  
 }
 
-void ldcConfig( void )
-{
-  writeRegister(RMAX_REG, 0x13);
-  writeRegister(RMIN_REG, 0x3D);
+void ldcConfig( void ){
+  writeRegister(POWR_REG, 0x00);
 
-  writeRegister(WDTF_REG, 0x93);
   writeRegister(LDCC_REG, 0x17);
   writeRegister(CLKC_REG, 0x00);
+  
+  writeRegister(RMAX_REG, 0x13); //0x13
+  writeRegister(RMIN_REG, 0x3D); //0x3D
+  
+  writeRegister(WDTF_REG, 0x45);
 
   writeRegister(CTHL_REG, 0x50);
   writeRegister(CTHM_REG, 0x14);
@@ -82,19 +97,12 @@ void clkConfig( void )
   OCR1A = 0;    //0-8MHz\1-4MHZ\3-2MHZ\7-1MHZ
 }
 
-float medeProx( void )
-{
-  uint32_t out = 0;
-  float Y = 0;
-  
-  for (int i = 0; i < 100; i++){
-    out  += readRegister(PRXL_REG, 2);  
+void printBits(byte myByte){
+  for(byte mask = 0x80; mask; mask >>= 1){
+    if(mask  & myByte)
+      Serial.print('1');
+    else
+      Serial.print('0');
   }
-  out /= 100;
-
-  Y = out/32768.0f;
-
-  Y = (RP_MAX*RP_MIN)/( (RP_MIN*(1-Y)) + (RP_MAX*Y) );
-
-  return Y;
+  Serial.println();
 }

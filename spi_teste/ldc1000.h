@@ -30,4 +30,5 @@ void ldcConfig( void );
 void clkConfig( void );
 uint32_t readRegister(uint8_t add, uint8_t nBytes);
 void writeRegister(uint8_t addr, uint8_t data);
-float medeProx( void );
+
+

@@ -4,6 +4,7 @@
 
 #define FREQ_PIN 9
 
+uint32_t freq_init = 0;
 
 void setup() {
   pinMode(SS, OUTPUT);
@@ -18,16 +19,17 @@ void setup() {
 
   clkConfig();
   ldcConfig();
+
+  freq_init = readFreq();
   
 }
 
 void loop() {
-  uint32_t out = readRegister(FQCL_REG, 3);
-  
+  uint32_t freq = readFreq();
   Serial.print("READ REGISTER: ");
-  Serial.println( out );
+  Serial.println( freq );
 
-  if( out < 3200 )
+  if( freq_init - freq > 10 )
     digitalWrite(8, HIGH);
   else
     digitalWrite(8, LOW);
@@ -105,4 +107,15 @@ void printBits(byte myByte){
       Serial.print('0');
   }
   Serial.println();
+}
+
+uint32_t readFreq( void )
+{
+  uint32_t out = 0;
+  for(uint8_t i = 0; i<100; i++){
+    out += readRegister(FQCL_REG, 3);
+  }
+  out /= 100;
+
+  return out;
 }
